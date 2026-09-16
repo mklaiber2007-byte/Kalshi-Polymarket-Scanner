@@ -1,0 +1,35 @@
+name: kalshi-polymarket-paper-scan
+
+on:
+  schedule:
+    # Every 15 minutes. GitHub's cron scheduler is best-effort and can lag
+    # under load — do not treat this as a low-latency execution system.
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+permissions:
+  contents: write   # needed to commit the updated scanner_log.db back to the repo
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scanner (paper mode — no orders, no keys used)
+        run: python scanner.py
+
+      - name: Commit updated log
+        run: |
+          git config user.name "scanner-bot"
+          git config user.email "scanner-bot@users.noreply.github.com"
+          git add scanner_log.db
+          git diff --cached --quiet || git commit -m "scanner: log run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
